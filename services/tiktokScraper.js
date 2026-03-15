@@ -2,23 +2,34 @@ const axios = require('axios');
 
 async function extract(url) {
     try {
-        // Since TikTok frequently changes their APIs, we'll implement a fallback
-        // strategy or use a reliable public API. For MVP, we simulate parsing
-        // or attempt a known un-official endpoint method.
-        
-        // This is a placeholder for actual TikTok scraping logic which typically
-        // requires specific headers, tokens, or a dedicated secondary API service
-        // like rapidAPI's TikTok endpoints.
-        
-        // Mock response for development based on PRD VideoInfo model
-        return {
-            title: "Sample TikTok Video",
-            thumbnailUrl: "https://placehold.co/400x600?text=TikTok+Thumb",
-            downloadUrl: "https://www.w3schools.com/html/mov_bbb.mp4", // Mock MP4
-            originalUrl: url,
-            platform: "TikTok"
-        };
+        // We will use the free TikWM API which provides a reliable, open endpoint 
+        // for extracting TikTok videos without watermarks, no API key required.
+        // Documentation: https://www.tikwm.com/
+
+        const response = await axios.get('https://www.tikwm.com/api/', {
+            params: {
+                url: url,
+                hd: 1
+            }
+        });
+
+        const data = response.data;
+
+        if (data && data.code === 0 && data.data) {
+            const videoData = data.data;
+            
+            return {
+                title: videoData.title || "TikTok Video",
+                thumbnailUrl: videoData.cover || "https://placehold.co/400x600?text=TikTok+Thumb",
+                downloadUrl: videoData.hdplay || videoData.play, // Get unwatermarked HD url if available
+                originalUrl: url,
+                platform: "TikTok"
+            };
+        } else {
+            throw new Error(data.msg || "Failed to parse TikTok video from TikWM");
+        }
     } catch (error) {
+        console.error('TikTok Scraper Error:', error.message);
         throw new Error("TikTok Extraction Failed: " + error.message);
     }
 }
